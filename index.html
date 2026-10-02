@@ -9,24 +9,27 @@
     #help{position:absolute;top:12px;left:12px;background:#101522bb;padding:12px;border-radius:10px;z-index:2;pointer-events:none;max-width:340px}
     #error{position:absolute;bottom:12px;left:12px;color:#ff9e9e;white-space:pre-wrap;z-index:5}
   </style>
+  <script>window.litDisableBundleWarning = true;</script>
   <script type="importmap">
-  {
-    "imports": {
-      "three": "https://cdn.jsdelivr.net/npm/three@0.186.0/build/three.module.js",
-      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.186.0/examples/jsm/",
-      "xrblocks": "https://cdn.jsdelivr.net/gh/google/xrblocks@build/xrblocks.js",
-      "xrblocks/addons/": "https://cdn.jsdelivr.net/gh/google/xrblocks@build/addons/",
-      "@pmndrs/uikit": "https://esm.sh/@pmndrs/uikit@0.10.0?external=three,@preact/signals-core",
-      "@preact/signals-core": "https://esm.sh/@preact/signals-core@1.12.1",
-      "lit": "https://esm.sh/lit@3.3.1",
-      "lit/": "https://esm.sh/lit@3.3.1/"
-    }
-  }
+  {"imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.186.0/build/three.module.js",
+    "three/": "https://cdn.jsdelivr.net/npm/three@0.186.0/",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.186.0/examples/jsm/",
+    "@pmndrs/uikit": "https://cdn.jsdelivr.net/npm/@pmndrs/uikit@1.0.64/dist/index.min.js",
+    "@pmndrs/uikit-pub-sub": "https://cdn.jsdelivr.net/npm/@pmndrs/uikit-pub-sub@1.0.64/dist/index.min.js",
+    "@pmndrs/msdfonts": "https://cdn.jsdelivr.net/npm/@pmndrs/msdfonts@1.0.64/dist/index.min.js",
+    "@preact/signals-core": "https://cdn.jsdelivr.net/npm/@preact/signals-core@1.14.0/dist/signals-core.mjs",
+    "yoga-layout/load": "https://cdn.jsdelivr.net/npm/yoga-layout@3.2.1/dist/src/load.js",
+    "lit": "https://esm.sh/lit@3.3.1",
+    "lit/": "https://esm.sh/lit@3.3.1/",
+    "xrblocks": "https://cdn.jsdelivr.net/gh/google/xrblocks@build/xrblocks.js",
+    "xrblocks/addons/": "https://cdn.jsdelivr.net/gh/google/xrblocks@build/addons/"
+  }}
   </script>
 </head>
 <body>
   <div id="help">XR Blocks · Escenas con botones<br>En Quest 3: activa AR o VR y selecciona con gatillo o pinch.<br>En PC: inicia el simulador y haz clic.</div>
-  <div id="error"></div>
+  <div id="status" style="position:absolute;right:12px;top:12px;z-index:3;background:#172435cf;padding:9px;border-radius:8px">Iniciando XR...</div><div id="error"></div>
   <script type="module">
     import * as THREE from 'three';
     import * as xb from 'xrblocks';
@@ -48,7 +51,7 @@
         for (const spec of specs) {
           const root = new THREE.Group();
           const shape = new THREE.Mesh(spec.geo(), new THREE.MeshStandardMaterial({color:spec.color,roughness:0.3,metalness:0.25}));
-          shape.position.set(0,1.55,-2.1);
+          shape.position.set(0,xb.user.height-0.10,-2.1);
           root.add(shape);
           const halo = new THREE.Mesh(new THREE.TorusGeometry(0.76,0.015,8,80),new THREE.MeshBasicMaterial({color:spec.color}));
           halo.position.copy(shape.position);
@@ -65,7 +68,7 @@
             ':hover':{backgroundColor:'#546582'}, ':active':{backgroundColor:'#1a2335'}}
         });
         this.menu = new xb.UICard({
-          size:{width:0.70,height:'auto'},
+          size:{width:0.70,height:0.57},
           style:{flexDirection:'column',alignItems:'center',gap:14,padding:24,backgroundColor:'#111827',borderRadius:22},
           children:[
             new xb.UIText({text:'ELEGIR ESCENA',style:{fontSize:34,color:'#ffffff'}}),
@@ -75,23 +78,23 @@
             makeButton('VERDE · OCTAEDRO',()=>this.go('verde'),'#14795a')
           ]
         });
-        this.menu.position.set(0,1.48,-1.25);
+        this.menu.position.set(0,xb.user.height-0.18,-1.25);
         this.add(this.menu);
 
         this.returnCard=new xb.UICard({
-          size:{width:0.46,height:'auto'},
+          size:{width:0.50,height:0.23},
           style:{flexDirection:'column',alignItems:'center',padding:15,gap:10,backgroundColor:'#111827'},
           children:[
             this.heading=new xb.UIText({text:'',style:{fontSize:28,color:'#ffffff'}}),
             makeButton('VOLVER AL MENÚ',()=>this.go('menu'))
           ]
         });
-        this.returnCard.position.set(0,0.85,-1.2);
+        this.returnCard.position.set(0,xb.user.height-0.53,-1.25);
         this.add(this.returnCard);
         this.go('menu');
       }
       go(id) {
-        this.active=id;
+        this.active=id; document.getElementById('status').textContent='Escena activa: '+id;
         this.menu.visible=id==='menu';
         this.returnCard.visible=id!=='menu';
         for (const [name,obj] of Object.entries(this.sceneGroups)) obj.root.visible=(name===id);
@@ -112,7 +115,7 @@
       options.enableReticles();
       options.xrButton.showEnterSimulatorButton=true;
       xb.add(new SceneButtons());
-      await xb.init(options);
+      await xb.init(options); document.getElementById('status').textContent='XR iniciado · menú';
     } catch(err) { document.getElementById('error').textContent=String(err); console.error(err); }
   </script>
 </body>
