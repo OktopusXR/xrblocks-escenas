@@ -28,7 +28,7 @@
   </script>
 </head>
 <body>
-  <div id="help">XR Blocks · Escenas con botones<br>En Quest 3: activa AR o VR y selecciona con gatillo o pinch.<br>En PC: inicia el simulador y haz clic.</div>
+  <div id="help">XR Blocks · Escenas con botones<br>En Quest 3: entra a XR con el control del navegador; luego usa AR / VR en el panel.<br>En PC: inicia el simulador y haz clic.</div>
   <div id="status" style="position:absolute;right:12px;top:12px;z-index:3;background:#172435cf;padding:9px;border-radius:8px">Iniciando XR...</div><div id="error"></div>
   <script type="module">
     import * as THREE from 'three';
@@ -68,30 +68,54 @@
             ':hover':{backgroundColor:'#546582'}, ':active':{backgroundColor:'#1a2335'}}
         });
         this.menu = new xb.UICard({
-          size:{width:0.70,height:0.57},
+          size:{width:0.70,height:0.77},
           style:{flexDirection:'column',alignItems:'center',gap:14,padding:24,backgroundColor:'#111827',borderRadius:22},
           children:[
             new xb.UIText({text:'ELEGIR ESCENA',style:{fontSize:34,color:'#ffffff'}}),
             new xb.UIText({text:'Prueba los botones espaciales',style:{fontSize:18,color:'#ced7ed'}}),
             makeButton('ROJA · ICOSAEDRO',()=>this.go('roja'),'#8c2440'),
             makeButton('AZUL · CUBO',()=>this.go('azul'),'#1555a8'),
-            makeButton('VERDE · OCTAEDRO',()=>this.go('verde'),'#14795a')
+            makeButton('VERDE · OCTAEDRO',()=>this.go('verde'),'#14795a'),
+            new xb.UIText({text:'MODO DE VISUALIZACIÓN',style:{fontSize:20,color:'#ced7ed'}}),
+            makeButton('AR · PASSTHROUGH',()=>this.switchMode('ar'),'#17666a'),
+            makeButton('VR · ENTORNO VIRTUAL',()=>this.switchMode('vr'),'#5844a0')
           ]
         });
         this.menu.position.set(0,xb.user.height-0.18,-1.25);
         this.add(this.menu);
 
         this.returnCard=new xb.UICard({
-          size:{width:0.50,height:0.23},
+          size:{width:0.50,height:0.44},
           style:{flexDirection:'column',alignItems:'center',padding:15,gap:10,backgroundColor:'#111827'},
           children:[
             this.heading=new xb.UIText({text:'',style:{fontSize:28,color:'#ffffff'}}),
-            makeButton('VOLVER AL MENÚ',()=>this.go('menu'))
+            makeButton('VOLVER AL MENÚ',()=>this.go('menu')),
+            makeButton('AR · PASSTHROUGH',()=>this.switchMode('ar'),'#17666a'),
+            makeButton('VR · ENTORNO VIRTUAL',()=>this.switchMode('vr'),'#5844a0')
           ]
         });
         this.returnCard.position.set(0,xb.user.height-0.53,-1.25);
         this.add(this.returnCard);
         this.go('menu');
+      }
+      switchMode(mode) {
+        // La API oficial cambia el entorno sin reiniciar la sesión WebXR.
+        const transition = xb.core && xb.core.transition;
+        if (!transition) {
+          document.getElementById('error').textContent = 'Transición XR aún no disponible. Inicia XR primero.';
+          return;
+        }
+        try {
+          if(mode === 'ar') {
+            transition.toAR();
+          } else {
+            transition.toVR({color:0x101525,targetAlpha:1.0});
+          }
+          document.getElementById('status').textContent = 'Modo solicitado: ' + mode.toUpperCase();
+          document.getElementById('error').textContent = '';
+        } catch (e) {
+          document.getElementById('error').textContent = 'Error al cambiar modo: '+String(e);
+        }
       }
       go(id) {
         this.active=id; document.getElementById('status').textContent='Escena activa: '+id;
