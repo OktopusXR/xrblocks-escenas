@@ -3,10 +3,10 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
-  <title>XR Blocks | V6 SONIC | AR VR</title>
+  <title>XR Blocks | V7 AMBIENT | AR VR</title>
   <style>
     html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#050f13;color:#e7fffb;font:14px system-ui}
-    #help{position:absolute;top:12px;left:12px;background:#513066e8;padding:12px;border-radius:10px;z-index:2;pointer-events:none;max-width:340px}
+    #help{position:absolute;top:12px;left:12px;background:#0b4051e8;padding:12px;border-radius:10px;z-index:2;pointer-events:none;max-width:340px}
     #error{position:absolute;bottom:12px;left:12px;color:#ff9e9e;white-space:pre-wrap;z-index:5}
   </style>
   <script>window.litDisableBundleWarning = true;</script>
@@ -28,8 +28,8 @@
   </script>
 </head>
 <body>
-  <div id="help">V6 · SONIC / XR · AUDIO + FONDO VR x100<br>En Quest 3: entra a XR con el control del navegador; luego usa AR / VR en el panel.<br>En PC: inicia el simulador y haz clic.</div>
-  <div id="status" style="position:absolute;right:12px;top:12px;z-index:3;background:#172435cf;padding:9px;border-radius:8px">V6 · iniciando...</div><div id="error"></div>
+  <div id="help">V7 · SONIC / XR · AUDIO + FONDO VR x100<br>En Quest 3: inicia XR desde el navegador. VR usa un entorno virtual independiente (misma sesión AR). Activa audio con un botón.<br>En PC: inicia el simulador y haz clic.</div>
+  <div id="status" style="position:absolute;right:12px;top:12px;z-index:3;background:#172435cf;padding:9px;border-radius:8px">V7 · iniciando...</div><div id="error"></div>
   <script type="module">
     import * as THREE from 'three';
     import * as xb from 'xrblocks';
@@ -41,9 +41,23 @@
         sun.position.set(1, 3, 2);
         this.add(sun);
 
-        // V6: restaurar depth test natural; ampliar esfera XRTransition, no forzar primer plano.
+        // V7: restaurar depth test natural; ampliar esfera XRTransition, no forzar primer plano.
         this.audio = null;
         this.soundEnabled = true;
+        this.ambientActive = false;
+        this.ambientNodes = [];
+        this.ambientGain = null;
+        // V7: no usar XRTransition.toVR(), que oculta la escena en Quest 3.
+        // Fondo virtual independiente: se dibuja ANTES de todos los sólidos y UI.
+        this.vrEnvironment = new THREE.Mesh(
+          new THREE.SphereGeometry(35, 48, 32),
+          new THREE.MeshBasicMaterial({color:0x07162e, side:THREE.BackSide, depthTest:false, depthWrite:false, fog:false})
+        );
+        this.vrEnvironment.renderOrder = -10000;
+        this.vrEnvironment.frustumCulled = false;
+        this.vrEnvironment.visible = false;
+        this.vrEnvironment.xb = {pointerEvents:'none'};
+        this.add(this.vrEnvironment);
         this.xrMode = 'ar';
         this.sceneGroups = {};
         const specs = [
@@ -73,18 +87,18 @@
         });
         this.menu = new xb.UICard({
           size:{width:0.76,height:0.87},
-          style:{flexDirection:'column',alignItems:'center',gap:14,padding:24,backgroundColor:'#05272c',borderRadius:22},
+          style:{flexDirection:'column',alignItems:'center',gap:14,padding:24,backgroundColor:'#123047',borderRadius:22},
           children:[
-            new xb.UIText({text:'V6 // SONIC XR',style:{fontSize:32,color:'#ffdd66'}}),
+            new xb.UIText({text:'V7 // AMBIENT XR',style:{fontSize:32,color:'#8fffe9'}}),
             new xb.UIText({text:'ELEGIR ESCENA',style:{fontSize:30,color:'#ffffff'}}),
-            new xb.UIText({text:'Prueba los botones espaciales',style:{fontSize:18,color:'#ced7ed'}}),
+            new xb.UIText({text:'AMBIENTE SONORO · ESCENAS',style:{fontSize:18,color:'#ced7ed'}}),
             makeButton('ROJA · ICOSAEDRO',()=>this.go('roja'),'#b31855'),
             makeButton('AZUL · CUBO',()=>this.go('azul'),'#095acb'),
             makeButton('VERDE · OCTAEDRO',()=>this.go('verde'),'#006d50'),
-            new xb.UIText({text:'MODO DE VISUALIZACIÓN',style:{fontSize:20,color:'#ced7ed'}}),
+            new xb.UIText({text:'FONDO AR / VR SIMULADO',style:{fontSize:20,color:'#ced7ed'}}),
             makeButton('AR · PASSTHROUGH',()=>this.switchMode('ar'),'#008f88'),
-            makeButton('VR · ENTORNO VIRTUAL',()=>this.switchMode('vr'),'#9139c5'),
-            makeButton('SONIDO: ON / OFF',()=>this.toggleSound(),'#995e17')
+            makeButton('VR · FONDO VIRTUAL',()=>this.switchMode('vr'),'#9139c5'),
+            makeButton('AUDIO AMBIENTE ON / OFF',()=>this.toggleSound(),'#ad6740')
           ]
         });
         this.menu.position.set(0,xb.user.height-0.18,-1.25);
@@ -92,72 +106,87 @@
 
         this.returnCard=new xb.UICard({
           size:{width:0.57,height:0.56},
-          style:{flexDirection:'column',alignItems:'center',padding:15,gap:10,backgroundColor:'#05272c'},
+          style:{flexDirection:'column',alignItems:'center',padding:15,gap:10,backgroundColor:'#123047'},
           children:[
-            new xb.UIText({text:'V6 // SONIC XR',style:{fontSize:22,color:'#ffdd66'}}),
+            new xb.UIText({text:'V7 // AMBIENT XR',style:{fontSize:22,color:'#8fffe9'}}),
             this.heading=new xb.UIText({text:'',style:{fontSize:28,color:'#ffffff'}}),
             makeButton('VOLVER AL MENÚ',()=>this.go('menu')),
             makeButton('AR · PASSTHROUGH',()=>this.switchMode('ar'),'#008f88'),
-            makeButton('VR · ENTORNO VIRTUAL',()=>this.switchMode('vr'),'#9139c5'),
-            makeButton('SONIDO: ON / OFF',()=>this.toggleSound(),'#995e17')
+            makeButton('VR · FONDO VIRTUAL',()=>this.switchMode('vr'),'#9139c5'),
+            makeButton('AUDIO AMBIENTE ON / OFF',()=>this.toggleSound(),'#ad6740')
           ]
         });
         this.returnCard.position.set(0,xb.user.height-0.53,-1.25);
         this.add(this.returnCard);
-        this.debugLabel=new xb.UIText({text:'V6 · AUDIO + XR',style:{fontSize:22,color:'#ffdd66'}});
+        this.debugLabel=new xb.UIText({text:'V7 · AUDIO + XR',style:{fontSize:22,color:'#8fffe9'}});
         this.menu.add(this.debugLabel);
         this.go('menu');
       }
-      playTone(freq=440, duration=0.18) {
-        if (!this.soundEnabled) return;
-        try {
-          const Context = window.AudioContext || window.webkitAudioContext;
-          if (!Context) return;
-          if (!this.audio) this.audio = new Context();
-          if (this.audio.state === 'suspended') this.audio.resume();
-          const now=this.audio.currentTime;
-          const osc=this.audio.createOscillator();
-          const gain=this.audio.createGain();
-          osc.type='sine'; osc.frequency.setValueAtTime(freq,now);
-          osc.frequency.exponentialRampToValueAtTime(freq*0.75,now+duration);
-          gain.gain.setValueAtTime(0.0001,now);
-          gain.gain.exponentialRampToValueAtTime(0.13,now+0.018);
-          gain.gain.exponentialRampToValueAtTime(0.0001,now+duration);
-          osc.connect(gain); gain.connect(this.audio.destination);
-          osc.start(now); osc.stop(now+duration+0.015);
-        } catch(e){ console.warn('Audio:',e); }
+      ensureAudio(){
+        const AC=window.AudioContext || window.webkitAudioContext;
+        if(!AC) return false;
+        if(!this.audio) this.audio=new AC();
+        if(this.audio.state==='suspended') this.audio.resume().catch(()=>{});
+        if(!this.ambientActive && this.soundEnabled) this.startAmbient();
+        return true;
       }
-      toggleSound() {
+      startAmbient(){
+        if(!this.audio || this.ambientActive) return;
+        const a=this.audio, t=a.currentTime;
+        const master=a.createGain(); master.gain.setValueAtTime(0.0001,t);
+        master.gain.exponentialRampToValueAtTime(0.085,t+2.5);
+        const filter=a.createBiquadFilter();filter.type='lowpass';filter.frequency.value=490;
+        filter.Q.value=0.4; filter.connect(master);master.connect(a.destination);
+        for(const [freq,vol] of [[55,0.35],[82.4069,0.15],[110.2,0.12],[164.81,0.04]]){
+          const osc=a.createOscillator(), level=a.createGain();
+          osc.type='sine';osc.frequency.value=freq;level.gain.value=vol;
+          osc.connect(level);level.connect(filter);osc.start();
+          this.ambientNodes.push(osc,level);
+        }
+        const lfo=a.createOscillator(), lfoDepth=a.createGain();
+        lfo.frequency.value=0.12; lfoDepth.gain.value=0.025;
+        lfo.connect(lfoDepth);lfoDepth.connect(master.gain);lfo.start();
+        this.ambientNodes.push(lfo,lfoDepth,filter);
+        this.ambientGain=master;this.ambientActive=true;
+      }
+      playTone(freq=440,duration=0.18){
+        if(!this.soundEnabled || !this.ensureAudio()) return;
+        const a=this.audio, now=a.currentTime;
+        const osc=a.createOscillator(),gain=a.createGain(),pan=a.createStereoPanner();
+        osc.type='sine';osc.frequency.setValueAtTime(freq,now);
+        osc.frequency.exponentialRampToValueAtTime(Math.max(40,freq*1.25),now+duration);
+        gain.gain.setValueAtTime(0.0001,now);
+        gain.gain.exponentialRampToValueAtTime(0.10,now+0.016);
+        gain.gain.exponentialRampToValueAtTime(0.0001,now+duration);
+        pan.pan.value=Math.random()*0.4-0.2;
+        osc.connect(gain);gain.connect(pan);pan.connect(a.destination);
+        osc.start(now);osc.stop(now+duration+0.02);
+      }
+      toggleSound(){
         this.soundEnabled=!this.soundEnabled;
-        this.status(`SONIDO ${this.soundEnabled?'ON':'OFF'}`);
-        if (this.soundEnabled) this.playTone(880,0.2);
+        if(this.soundEnabled) {
+          this.ensureAudio();
+          if(this.ambientGain) this.ambientGain.gain.setTargetAtTime(0.085,this.audio.currentTime,0.4);
+          this.playTone(880,0.22);
+        } else if (this.ambientGain) {
+          this.ambientGain.gain.setTargetAtTime(0.0001,this.audio.currentTime,0.3);
+        }
+        this.status(`AUDIO ${this.soundEnabled?'ON':'OFF'} · ${this.xrMode.toUpperCase()}`);
       }
       status(label) {
-        document.getElementById('status').textContent=`V6 · ${label}`;
-        if(this.debugLabel) this.debugLabel.text=`V6 · ${label}`;
+        document.getElementById('status').textContent=`V7 · ${label}`;
+        if(this.debugLabel) this.debugLabel.text=`V7 · ${label}`;
       }
-      switchMode(mode) {
-        const transition=xb.core && xb.core.transition;
-        if(!transition) {
-          document.getElementById('error').textContent='Transición XR no disponible. Inicia XR primero.';
-          return;
-        }
-        try {
-          this.playTone(mode==='vr'?180:660,0.38);
-          if(mode==='vr') {
-            // FIX V6: la esfera de XRTransition es pequeña por defecto.
-            // Mantenerla ampliamente DETRÁS de objetos 3D y paneles.
-            transition.scale.setScalar(100);
-            transition.toVR({color:0x090c2b,targetAlpha:1.0});
-          } else {
-            transition.toAR();
-          }
-          this.xrMode=mode;
-          this.status(`${mode.toUpperCase()} · ${this.active}`);
-          document.getElementById('error').textContent='';
-        } catch(e) {
-          document.getElementById('error').textContent='Error AR/VR: '+String(e);
-        }
+      switchMode(mode){
+        // V7 diagnóstico: no llamar a transition.toVR() ni a transition.toAR().
+        // Passthrough sigue activo en la sesión XR; la esfera opaca simula un
+        // entorno VR y se mantiene siempre detrás de objetos y controles.
+        this.ensureAudio();
+        this.playTone(mode==='vr'?165:660,0.42);
+        this.vrEnvironment.visible=(mode==='vr');
+        this.xrMode=mode;
+        this.status(`${mode.toUpperCase()} · ${this.active} · FONDO INDEPENDIENTE`);
+        document.getElementById('error').textContent='';
       }
       go(id) {
         this.active=id; this.status(`ESCENA ${id} · ${this.xrMode.toUpperCase()}`);
@@ -178,11 +207,12 @@
     window.addEventListener('unhandledrejection',e=>document.getElementById('error').textContent=String(e.reason));
     try {
       const options=new xb.Options();
-      options.enableXRTransitions();
+      // No activar XRTransition en V7: aislamos el fallo de Oculus/Quest 3.
+      // options.enableXRTransitions();
       options.enableReticles();
       options.xrButton.showEnterSimulatorButton=true;
       xb.add(new SceneButtons());
-      await xb.init(options); document.getElementById('status').textContent='V6 · XR iniciado · menú';
+      await xb.init(options); document.getElementById('status').textContent='V7 · XR iniciado · menú';
     } catch(err) { document.getElementById('error').textContent=String(err); console.error(err); }
   </script>
 </body>
