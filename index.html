@@ -28,7 +28,7 @@
   </script>
 </head>
 <body>
-  <div id="help">XR Blocks · Escenas con botones<br>En Quest 3: entra a XR con el control del navegador; luego usa AR / VR en el panel.<br>En PC: inicia el simulador y haz clic.</div>
+  <div id="help">XR Blocks · Escenas con botones · VR corregido<br>En Quest 3: entra a XR con el control del navegador; luego usa AR / VR en el panel.<br>En PC: inicia el simulador y haz clic.</div>
   <div id="status" style="position:absolute;right:12px;top:12px;z-index:3;background:#172435cf;padding:9px;border-radius:8px">Iniciando XR...</div><div id="error"></div>
   <script type="module">
     import * as THREE from 'three';
@@ -41,6 +41,8 @@
         sun.position.set(1, 3, 2);
         this.add(sun);
 
+        // El entorno VR debe dibujarse detrás del contenido interactivo.
+        this.vrBackgroundPrepared = false;
         this.sceneGroups = {};
         const specs = [
           {id:'roja', label:'ESCENA ROJA', color:0xff3458, geo:()=>new THREE.IcosahedronGeometry(0.48,0)},
@@ -98,6 +100,29 @@
         this.add(this.returnCard);
         this.go('menu');
       }
+      prepareVRBackground(transition) {
+        // XRTransition usa una malla 3D como fondo. Si escribe al depth buffer
+        // puede ocultar las escenas (en especial a 2 m de distancia).
+        // Renderizamos sus materiales sin escritura de profundidad y primero.
+        const apply = (object) => {
+          if (!object) return;
+          object.renderOrder = -10000;
+          if (object.material) {
+            for (const mat of (Array.isArray(object.material) ? object.material : [object.material])) {
+              mat.depthWrite = false;
+              mat.depthTest = false;
+              mat.needsUpdate = true;
+            }
+          }
+        };
+        apply(transition);
+        if (typeof transition.traverse === 'function') transition.traverse(apply);
+        // Fallback para wrappers que exponen directamente el material.
+        if (transition.material) {
+          transition.material.depthWrite = false;
+          transition.material.depthTest = false;
+        }
+      }
       switchMode(mode) {
         // La API oficial cambia el entorno sin reiniciar la sesión WebXR.
         const transition = xb.core && xb.core.transition;
@@ -109,7 +134,12 @@
           if(mode === 'ar') {
             transition.toAR();
           } else {
+            this.prepareVRBackground(transition);
             transition.toVR({color:0x101525,targetAlpha:1.0});
+            // Conservar escena activa: nunca llamar go('menu') al cambiar modo.
+            if (this.active !== 'menu' && this.sceneGroups[this.active]) {
+              this.sceneGroups[this.active].root.visible = true;
+            }
           }
           document.getElementById('status').textContent = 'Modo solicitado: ' + mode.toUpperCase();
           document.getElementById('error').textContent = '';
