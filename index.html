@@ -3,10 +3,10 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
-  <title>XR Blocks | Botones y escenas</title>
+  <title>XR Blocks | V5 NEON | AR VR</title>
   <style>
-    html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#11131b;color:white;font:14px system-ui}
-    #help{position:absolute;top:12px;left:12px;background:#101522bb;padding:12px;border-radius:10px;z-index:2;pointer-events:none;max-width:340px}
+    html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#050f13;color:#e7fffb;font:14px system-ui}
+    #help{position:absolute;top:12px;left:12px;background:#006d72e8;padding:12px;border-radius:10px;z-index:2;pointer-events:none;max-width:340px}
     #error{position:absolute;bottom:12px;left:12px;color:#ff9e9e;white-space:pre-wrap;z-index:5}
   </style>
   <script>window.litDisableBundleWarning = true;</script>
@@ -28,8 +28,8 @@
   </script>
 </head>
 <body>
-  <div id="help">XR Blocks · Escenas con botones · VR corregido<br>En Quest 3: entra a XR con el control del navegador; luego usa AR / VR en el panel.<br>En PC: inicia el simulador y haz clic.</div>
-  <div id="status" style="position:absolute;right:12px;top:12px;z-index:3;background:#172435cf;padding:9px;border-radius:8px">Iniciando XR...</div><div id="error"></div>
+  <div id="help">V5 · NEON / XR · 01-OCT-2026<br>En Quest 3: entra a XR con el control del navegador; luego usa AR / VR en el panel.<br>En PC: inicia el simulador y haz clic.</div>
+  <div id="status" style="position:absolute;right:12px;top:12px;z-index:3;background:#172435cf;padding:9px;border-radius:8px">V5 · iniciando...</div><div id="error"></div>
   <script type="module">
     import * as THREE from 'three';
     import * as xb from 'xrblocks';
@@ -41,7 +41,7 @@
         sun.position.set(1, 3, 2);
         this.add(sun);
 
-        // El entorno VR debe dibujarse detrás del contenido interactivo.
+        // V5: mantener las geometrías por encima de la capa VR (sin depender del buffer de profundidad).
         this.vrBackgroundPrepared = false;
         this.sceneGroups = {};
         const specs = [
@@ -53,10 +53,16 @@
         for (const spec of specs) {
           const root = new THREE.Group();
           const shape = new THREE.Mesh(spec.geo(), new THREE.MeshStandardMaterial({color:spec.color,roughness:0.3,metalness:0.25}));
-          shape.position.set(0,xb.user.height-0.10,-2.1);
+          shape.position.set(0,xb.user.height-0.08,-1.75);
+          shape.material.depthTest = false;
+          shape.material.depthWrite = false;
+          shape.renderOrder = 5000;
           root.add(shape);
           const halo = new THREE.Mesh(new THREE.TorusGeometry(0.76,0.015,8,80),new THREE.MeshBasicMaterial({color:spec.color}));
           halo.position.copy(shape.position);
+          halo.material.depthTest=false;
+          halo.material.depthWrite=false;
+          halo.renderOrder=4999;
           halo.rotation.x=0.3;
           root.add(halo);
           root.visible=false;
@@ -64,36 +70,38 @@
           this.sceneGroups[spec.id]={root,shape,halo};
         }
 
-        const makeButton=(label, callback, color='#2c354e')=>new xb.UIButton({
+        const makeButton=(label, callback, color='#123b3d')=>new xb.UIButton({
           label, onClick:callback,
           style:{width:230,height:65,backgroundColor:color,color:'#ffffff',borderRadius:12,
             ':hover':{backgroundColor:'#546582'}, ':active':{backgroundColor:'#1a2335'}}
         });
         this.menu = new xb.UICard({
-          size:{width:0.70,height:0.77},
-          style:{flexDirection:'column',alignItems:'center',gap:14,padding:24,backgroundColor:'#111827',borderRadius:22},
+          size:{width:0.76,height:0.87},
+          style:{flexDirection:'column',alignItems:'center',gap:14,padding:24,backgroundColor:'#05272c',borderRadius:22},
           children:[
-            new xb.UIText({text:'ELEGIR ESCENA',style:{fontSize:34,color:'#ffffff'}}),
+            new xb.UIText({text:'V5 // NEON XR',style:{fontSize:32,color:'#40ffd3'}}),
+            new xb.UIText({text:'ELEGIR ESCENA',style:{fontSize:30,color:'#ffffff'}}),
             new xb.UIText({text:'Prueba los botones espaciales',style:{fontSize:18,color:'#ced7ed'}}),
-            makeButton('ROJA · ICOSAEDRO',()=>this.go('roja'),'#8c2440'),
-            makeButton('AZUL · CUBO',()=>this.go('azul'),'#1555a8'),
-            makeButton('VERDE · OCTAEDRO',()=>this.go('verde'),'#14795a'),
+            makeButton('ROJA · ICOSAEDRO',()=>this.go('roja'),'#b31855'),
+            makeButton('AZUL · CUBO',()=>this.go('azul'),'#095acb'),
+            makeButton('VERDE · OCTAEDRO',()=>this.go('verde'),'#006d50'),
             new xb.UIText({text:'MODO DE VISUALIZACIÓN',style:{fontSize:20,color:'#ced7ed'}}),
-            makeButton('AR · PASSTHROUGH',()=>this.switchMode('ar'),'#17666a'),
-            makeButton('VR · ENTORNO VIRTUAL',()=>this.switchMode('vr'),'#5844a0')
+            makeButton('AR · PASSTHROUGH',()=>this.switchMode('ar'),'#008f88'),
+            makeButton('VR · ENTORNO VIRTUAL',()=>this.switchMode('vr'),'#9139c5')
           ]
         });
         this.menu.position.set(0,xb.user.height-0.18,-1.25);
         this.add(this.menu);
 
         this.returnCard=new xb.UICard({
-          size:{width:0.50,height:0.44},
-          style:{flexDirection:'column',alignItems:'center',padding:15,gap:10,backgroundColor:'#111827'},
+          size:{width:0.57,height:0.56},
+          style:{flexDirection:'column',alignItems:'center',padding:15,gap:10,backgroundColor:'#05272c'},
           children:[
+            new xb.UIText({text:'V5 // NEON XR',style:{fontSize:22,color:'#40ffd3'}}),
             this.heading=new xb.UIText({text:'',style:{fontSize:28,color:'#ffffff'}}),
             makeButton('VOLVER AL MENÚ',()=>this.go('menu')),
-            makeButton('AR · PASSTHROUGH',()=>this.switchMode('ar'),'#17666a'),
-            makeButton('VR · ENTORNO VIRTUAL',()=>this.switchMode('vr'),'#5844a0')
+            makeButton('AR · PASSTHROUGH',()=>this.switchMode('ar'),'#008f88'),
+            makeButton('VR · ENTORNO VIRTUAL',()=>this.switchMode('vr'),'#9139c5')
           ]
         });
         this.returnCard.position.set(0,xb.user.height-0.53,-1.25);
@@ -135,20 +143,30 @@
             transition.toAR();
           } else {
             this.prepareVRBackground(transition);
-            transition.toVR({color:0x101525,targetAlpha:1.0});
+            transition.toVR({color:0x090c2b,targetAlpha:1.0});
+            // V5: toVR puede reconstruir o cambiar los materiales del fondo.
+            // Reaplicamos el orden y la profundidad después de solicitar el cambio.
+            this.prepareVRBackground(transition);
             // Conservar escena activa: nunca llamar go('menu') al cambiar modo.
             if (this.active !== 'menu' && this.sceneGroups[this.active]) {
               this.sceneGroups[this.active].root.visible = true;
+              this.sceneGroups[this.active].root.traverse(o => {
+                if(o.isMesh) {
+                  o.renderOrder = o===this.sceneGroups[this.active].shape ? 5000 : 4999;
+                  o.material.depthTest=false;
+                  o.material.depthWrite=false;
+                }
+              });
             }
           }
-          document.getElementById('status').textContent = 'Modo solicitado: ' + mode.toUpperCase();
+          document.getElementById('status').textContent = 'V5 · ' + mode.toUpperCase() + ' · ' + this.active;
           document.getElementById('error').textContent = '';
         } catch (e) {
           document.getElementById('error').textContent = 'Error al cambiar modo: '+String(e);
         }
       }
       go(id) {
-        this.active=id; document.getElementById('status').textContent='Escena activa: '+id;
+        this.active=id; document.getElementById('status').textContent='V5 · escena: '+id;
         this.menu.visible=id==='menu';
         this.returnCard.visible=id!=='menu';
         for (const [name,obj] of Object.entries(this.sceneGroups)) obj.root.visible=(name===id);
@@ -169,7 +187,7 @@
       options.enableReticles();
       options.xrButton.showEnterSimulatorButton=true;
       xb.add(new SceneButtons());
-      await xb.init(options); document.getElementById('status').textContent='XR iniciado · menú';
+      await xb.init(options); document.getElementById('status').textContent='V5 · XR iniciado · menú';
     } catch(err) { document.getElementById('error').textContent=String(err); console.error(err); }
   </script>
 </body>
